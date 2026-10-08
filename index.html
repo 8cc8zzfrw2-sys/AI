@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1020">
+<title>AI Smart Glasses Core</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{color-scheme:dark;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{margin:0;background:#0b1020;color:#fff}
+main{max-width:720px;margin:auto;padding:20px 16px 32px}
+h1{font-size:24px;margin:0 0 6px}.status{font-size:13px;color:#9ca3af;margin-bottom:20px}
+.card{background:#151b2e;border:1px solid #28324d;border-radius:16px;padding:16px;margin-bottom:14px}
+label{display:block;font-size:13px;color:#aab3c5;margin-bottom:7px}
+input,textarea,button{font:inherit} input,textarea{width:100%;box-sizing:border-box;background:#0e1425;color:#fff;border:1px solid #33405f;border-radius:12px;padding:12px}
+textarea{min-height:100px;resize:vertical} button{border:0;border-radius:12px;padding:13px 16px;margin-top:10px;background:#3b82f6;color:white;font-weight:700}
+button.secondary{background:#29344f}.row{display:flex;gap:8px}.row>*{flex:1}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0e1425;border-radius:12px;padding:12px;min-height:80px}
+</style>
+</head>
+<body>
+<main>
+<h1>AI Smart Glasses Core</h1>
+<div class="status" id="status">スマホモード / AI Core未接続</div>
+<section class="card">
+<label for="server">AI Core URL</label>
+<input id="server" value="http://localhost:8000">
+<div class="row"><button id="health">接続確認</button><button id="stream" class="secondary">SSE確認</button></div>
+</section>
+<section class="card">
+<label for="command">AIへの入力</label>
+<textarea id="command" placeholder="例：数学 2 + 3"></textarea>
+<button id="send">送信</button>
+</section>
+<section class="card">
+<label>AI Core応答</label><pre id="output">ここに結果が表示されます。</pre>
+</section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const base=()=>$("server").value.trim().replace(/\/$/,"");
+const show=x=>$("output").textContent=typeof x==="string"?x:JSON.stringify(x,null,2);
+$("health").onclick=async()=>{try{const r=await fetch(base()+"/health");const j=await r.json();$("status").textContent="AI Core接続OK / v"+j.version;show(j)}catch(e){$("status").textContent="接続できません";show(e.message)}};
+$("send").onclick=async()=>{const text=$("command").value.trim();if(!text){show("入力してください");return}try{const r=await fetch(base()+"/v1/command",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text,source:"mobile"})});show(await r.json())}catch(e){show("通信エラー: "+e.message)}};
+$("stream").onclick=()=>{try{const es=new EventSource(base()+"/v1/stream");es.addEventListener("status",e=>show("SSE: "+e.data));es.onerror=()=>{es.close();show("SSE接続終了")}}catch(e){show(e.message)}};
+</script>
+</body>
+</html>
